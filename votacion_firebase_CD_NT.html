@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Reunión NeuroTransmitiendo 🧠</title>
+<style>
+  :root {
+    --green: #2d8a5e;
+    --green-light: #e8f7ef;
+    --green-mid: #b8e8cc;
+    --green-soft: #6dbf94;
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --border: #e5e5e5;
+    --border-soft: #f0f0f0;
+    --empty: #f5f5f5;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container { max-width: 780px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+
+  .header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 1.5rem;
+    background: var(--green-light); border-radius: 14px;
+    padding: 1rem 1.25rem; border: 0.5px solid var(--green-mid);
+  }
+  .header canvas { display: block; flex-shrink: 0; }
+  .header-label {
+    font-size: 11px; font-weight: 500; color: var(--green);
+    text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 4px;
+  }
+  .header-title { font-size: 17px; font-weight: 500; margin: 0 0 4px; line-height: 1.3; }
+  .header-subtitle { font-size: 15px; font-weight: 500; color: var(--green); margin: 0; }
+
+  .sync-indicator {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-secondary); margin-top: 4px;
+  }
+  .sync-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); animation: pulse 2s infinite;
+  }
+  .sync-dot.offline { background: #c44; animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+  .tab {
+    padding: 8px 18px; border-radius: 10px;
+    border: 0.5px solid var(--border); background: transparent;
+    color: var(--text); cursor: pointer; font-size: 13px;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .tab.active {
+    background: var(--green); color: white;
+    border-color: var(--green); font-weight: 500;
+  }
+
+  .section { margin-bottom: 1.25rem; }
+  .hint { font-size: 13px; color: var(--text-secondary); margin: 0 0 0.75rem; line-height: 1.5; }
+
+  .consigna {
+    background: var(--green-light); border: 0.5px solid var(--green-mid);
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 1.25rem;
+  }
+  .consigna p { font-size: 14px; color: var(--green); margin: 0; line-height: 1.6; }
+
+  .members-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .member-btn {
+    padding: 10px 18px; border-radius: 10px;
+    border: 0.5px solid var(--green-mid); background: var(--green-light);
+    color: var(--text); cursor: pointer; font-size: 14px;
+    font-family: inherit; display: inline-flex; align-items: center;
+    gap: 7px; transition: transform 0.1s;
+  }
+  .member-btn:active { transform: scale(0.97); }
+  .member-btn.done {
+    background: white; border-color: var(--border); color: var(--text-secondary);
+  }
+  .member-btn.done::after {
+    content: "✓"; color: var(--green); font-weight: 600; margin-left: 4px;
+  }
+
+  .grid-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
+  table.grid { border-collapse: collapse; width: 100%; min-width: 300px; font-size: 13px; }
+  .grid th {
+    padding: 8px 6px; text-align: center;
+    color: var(--text-secondary); font-weight: 500; font-size: 12px;
+    position: sticky; top: 0; background: var(--bg); z-index: 1;
+  }
+  .grid th:first-child { text-align: left; padding-left: 10px; font-weight: 400; }
+  .grid td { padding: 2px 3px; text-align: center; }
+  .grid tr { border-top: 0.5px solid var(--border-soft); }
+  .time-label {
+    color: var(--text-secondary); white-space: nowrap;
+    padding-left: 10px !important; font-variant-numeric: tabular-nums;
+  }
+
+  .slot {
+    width: 38px; height: 30px; border-radius: 6px;
+    border: 0.5px solid var(--border); background: transparent;
+    margin: 0 auto; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.08s, border-color 0.08s;
+    user-select: none; -webkit-user-select: none;
+    color: transparent; font-size: 14px; font-weight: 500;
+  }
+  .slot.selected {
+    background: var(--green); border-color: var(--green); color: white;
+  }
+
+  /* Heatmap (results) */
+  .heat {
+    width: 46px; height: 32px; border-radius: 6px;
+    border: 0.5px solid var(--border-soft);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    color: white; transition: transform 0.1s;
+    font-variant-numeric: tabular-nums;
+  }
+  .heat:hover { transform: scale(1.08); z-index: 2; position: relative; }
+  .heat.empty { background: var(--empty); color: #bbb; font-weight: 400; border-color: var(--border-soft); }
+
+  .tooltip {
+    position: fixed; background: #222; color: white;
+    padding: 8px 12px; border-radius: 8px; font-size: 12px;
+    pointer-events: none; z-index: 100; max-width: 240px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0; transition: opacity 0.1s;
+    line-height: 1.5;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip strong { color: #9fd9b8; }
+  .tooltip .tt-yes { color: #9fd9b8; }
+  .tooltip .tt-no { color: #ff9b9b; }
+
+  .actions { display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap; }
+  .btn {
+    padding: 9px 18px; border-radius: 10px;
+    border: 0.5px solid var(--border); background: transparent;
+    color: var(--text); cursor: pointer; font-size: 14px; font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--green); color: white; border-color: var(--green); font-weight: 500;
+  }
+  .btn-clear { color: var(--text-secondary); }
+
+  .legend-scale {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0.5rem 0 1.25rem; font-size: 12px; color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+  .legend-gradient {
+    display: flex; height: 14px; border-radius: 4px; overflow: hidden;
+    border: 0.5px solid var(--border-soft); min-width: 140px; flex: 1; max-width: 200px;
+  }
+  .legend-gradient span { flex: 1; }
+
+  .winner {
+    background: linear-gradient(135deg, var(--green-light), white);
+    border: 1px solid var(--green);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 1rem;
+  }
+  .winner-label {
+    font-size: 11px; font-weight: 600; color: var(--green);
+    text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 6px;
+  }
+  .winner-time { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  .winner-detail { font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+
+  .admin-panel {
+    margin-top: 2rem; padding: 14px; border-radius: 12px;
+    border: 0.5px dashed var(--border); background: #fafafa;
+  }
+  .admin-panel summary {
+    cursor: pointer; font-size: 13px; color: var(--text-secondary); font-weight: 500;
+  }
+  .admin-panel details[open] summary { margin-bottom: 10px; }
+  .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .status { font-size: 12px; color: var(--text-secondary); margin-top: 0.75rem; }
+  .loading { text-align: center; padding: 2rem; color: var(--text-secondary); }
+
+  .config-warning {
+    background: #fff4e6; border: 0.5px solid #f4b169;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem;
+    font-size: 13px; color: #8a4b00;
+  }
+
+  @media (max-width: 480px) {
+    .slot { width: 32px; height: 28px; }
+    .heat { width: 40px; height: 28px; font-size: 11px; }
+    .container { padding: 1rem 0.75rem 3rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <canvas id="brain" width="90" height="90"></canvas>
+    <div style="flex:1;">
+      <p class="header-label">Coordinación de reunión</p>
+      <h1 class="header-title">Reunión de la Comisión Directiva</h1>
+      <p class="header-subtitle">NeuroTransmitiendo 🧠</p>
+      <div class="sync-indicator" id="syncIndicator">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncText">Conectando…</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="vote">Marcar disponibilidad</button>
+    <button class="tab" data-view="results">Ver resultados</button>
+  </div>
+
+  <div id="app"><div class="loading">Cargando…</div></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Firebase -->
+<script type="module">
+// ============================================================
+// ⚙️ CONFIG FIREBASE — PEGAR ACÁ LA CONFIG DE TU PROYECTO
+// ============================================================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDxkmw4jaADIkGP6hTuLoDdZLQQ7NhP6JY",
+  authDomain: "agendar-reuniones-de-cd--nt.firebaseapp.com",
+  databaseURL: "https://agendar-reuniones-de-cd--nt-default-rtdb.firebaseio.com",
+  projectId: "agendar-reuniones-de-cd--nt",
+  storageBucket: "agendar-reuniones-de-cd--nt.firebasestorage.app",
+  messagingSenderId: "746161207241",
+  appId: "1:746161207241:web:fdbdbb556919b8fdb41a18"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+};
+const ROOM_ID = "comision-directiva-abril-2026"; // podés cambiar por reunión
+// ============================================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const MEMBERS = [
+  { id: "ar1", name: "Tomi",   offset: -3, flag: "🇦🇷" },
+  { id: "ar2", name: "Marian", offset: -7, flag: "🇺🇸" },
+  { id: "ar3", name: "Manu",   offset: -3, flag: "🇦🇷" },
+  { id: "ar4", name: "Anto",   offset: -3, flag: "🇦🇷" },
+  { id: "par", name: "Nico",   offset:  2, flag: "🇫🇷" },
+  { id: "sf",  name: "Iair",   offset: -3, flag: "🇦🇷" },
+];
+
+// ⚠️ EDITÁ ESTAS FECHAS (formato YYYY-MM-DD)
+const DATES = [
+  "2026-04-22",
+  "2026-04-23",
+  "2026-04-24",
+  "2026-04-28",
+  "2026-04-29",
+  "2026-04-30",
+  "2026-05-01",
+  "2026-05-02",
+];
+
+const SLOTS_ARG = Array.from({ length: 14 }, (_, i) => i + 8); // 8 a 21 hs ARG
+
+// ============ UTILS ============
+function toLocal(hourARG, memberOffset) {
+  let h = hourARG + (memberOffset - (-3));
+  if (h < 0) h += 24;
+  if (h >= 24) h -= 24;
+  return h;
+}
+const fmt = h => `${String(h).padStart(2,"0")}:00`;
+const formatShort = d => {
+  const [, mo, day] = d.split("-");
+  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return `${parseInt(day)} ${months[parseInt(mo)-1]}`;
+};
+const formatDayShort = d => {
+  const [y, mo, day] = d.split("-");
+  const days = ["dom","lun","mar","mié","jue","vie","sáb"];
+  const date = new Date(`${y}-${mo}-${day}T12:00:00`);
+  return `${days[date.getDay()]} ${parseInt(day)}`;
+};
+const formatDate = d => {
+  const [y, mo, day] = d.split("-");
+  const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const days = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  const date = new Date(`${y}-${mo}-${day}T12:00:00`);
+  return `${days[date.getDay()]} ${parseInt(day)} de ${months[parseInt(mo)-1]}`;
+};
+
+// Heatmap: red (0) → yellow (mid) → green (all)
+function heatColor(votes, total) {
+  if (votes === 0) return { bg: "#f5f5f5", fg: "#bbb" };
+  const r = votes / total;
+  // 0 voters = light red, 50% = amber, 100% = strong green
+  // Interpolate through HSL
+  // Start: 0° (red), end: 140° (green), through 45° (amber)
+  const hue = 0 + r * 140;              // 0 → 140
+  const sat = 60 + r * 10;                // 60 → 70
+  const light = 75 - r * 35;              // 75 → 40 (darker = more votes)
+  return {
+    bg: `hsl(${hue}, ${sat}%, ${light}%)`,
+    fg: light < 55 ? "white" : "#2a2a2a"
+  };
+}
+
+// ============ BRAIN ============
+(function brain() {
+  const canvas = document.getElementById("brain");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const nodes = Array.from({ length: 18 }, () => ({
+    x: 20 + Math.random() * (W - 40), y: 20 + Math.random() * (H - 40),
+    vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+    r: 2.5 + Math.random() * 2.5, pulse: Math.random() * Math.PI * 2,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i+1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        const dist = Math.hypot(a.x-b.x, a.y-b.y);
+        if (dist < 65) {
+          const alpha = Math.max(0, 1 - dist/65) * 0.35;
+          ctx.strokeStyle = `rgba(45,138,94,${alpha})`;
+          ctx.lineWidth = 0.8;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+    nodes.forEach(n => {
+      n.pulse += 0.04;
+      const glow = 1 + 0.4 * Math.sin(n.pulse);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r * glow, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(45,138,94,0.75)`;
+      ctx.fill();
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 10 || n.x > W-10) n.vx *= -1;
+      if (n.y < 10 || n.y > H-10) n.vy *= -1;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ============ FIREBASE INIT ============
+let db = null;
+let votesRef = null;
+const syncDot = document.getElementById("syncDot");
+const syncText = document.getElementById("syncText");
+
+let state = {
+  view: "vote",
+  step: "setup",
+  currentMember: null,
+  votes: {},
+  configured: false,
+};
+
+function isFirebaseConfigured() {
+  return firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("PEGAR");
+}
+
+if (isFirebaseConfigured()) {
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    votesRef = ref(db, `rooms/${ROOM_ID}/votes`);
+    onValue(votesRef, snap => {
+      state.votes = snap.val() || {};
+      syncDot.classList.remove("offline");
+      syncText.textContent = "Sincronizado en tiempo real";
+      render();
+    }, err => {
+      syncDot.classList.add("offline");
+      syncText.textContent = "Error de conexión";
+      console.error(err);
+    });
+    state.configured = true;
+  } catch (e) {
+    syncDot.classList.add("offline");
+    syncText.textContent = "Firebase no configurado";
+    console.error(e);
+  }
+} else {
+  syncDot.classList.add("offline");
+  syncText.textContent = "⚠ Firebase sin configurar — modo local";
+}
+
+async function saveMemberVotes(memberId, memberVotes) {
+  if (!db) {
+    state.votes[memberId] = memberVotes;
+    render();
+    return false;
+  }
+  const memberRef = ref(db, `rooms/${ROOM_ID}/votes/${memberId}`);
+  if (Object.keys(memberVotes).length === 0) {
+    await remove(memberRef);
+  } else {
+    await set(memberRef, memberVotes);
+  }
+  return true;
+}
+async function clearAllVotes() {
+  if (!db) { state.votes = {}; render(); return; }
+  await set(ref(db, `rooms/${ROOM_ID}/votes`), null);
+}
+
+// ============ RENDER ============
+const app = document.getElementById("app");
+
+function render() {
+  if (!state.configured && !state.shownWarning) {
+    // show config warning once at top of results
+  }
+  if (state.view === "vote") {
+    state.step === "setup" ? renderSetup() : renderVoting();
+  } else {
+    renderResults();
+  }
+}
+
+function renderConfigWarning() {
+  if (state.configured) return "";
+  return `<div class="config-warning">
+    ⚠ Firebase todavía no está configurado. Los votos se guardan solo en este navegador. Seguí la guía para conectar Firebase y que todos compartan los votos.
+  </div>`;
+}
+
+function renderSetup() {
+  const done = MEMBERS.filter(m => state.votes[m.id] && Object.keys(state.votes[m.id]).length > 0);
+  const doneIds = done.map(m => m.id);
+
+  app.innerHTML = `
+    ${renderConfigWarning()}
+    <div class="section">
+      <p class="hint">📅 Fechas propuestas para la reunión:</p>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:1rem;">
+        ${DATES.map(d => `<span style="display:inline-flex; align-items:center; background:var(--green-light); border:0.5px solid var(--green-mid); border-radius:10px; padding:4px 12px; font-size:13px; color:var(--green);">${formatShort(d)}</span>`).join("")}
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="hint">👤 ¿Quién sos? Tocá tu nombre para marcar tu disponibilidad:</p>
+      <div class="members-grid">
+        ${MEMBERS.map(m => `
+          <button class="member-btn ${doneIds.includes(m.id) ? "done" : ""}" data-member="${m.id}">
+            <span style="font-size:16px;">${m.flag}</span> ${m.name}
+          </button>
+        `).join("")}
+      </div>
+      ${done.length > 0 ? `<p class="status">Ya marcaron: ${done.map(m => m.name).join(", ")}</p>` : ""}
+      <p class="status" style="margin-top: 0.5rem;">💡 Si ya marcaste, podés volver a tocar tu nombre para corregir.</p>
+    </div>
+  `;
+
+  app.querySelectorAll(".member-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.currentMember = btn.dataset.member;
+      state.step = "voting";
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+}
+
+function renderVoting() {
+  const member = MEMBERS.find(m => m.id === state.currentMember);
+  const memberVotes = { ...(state.votes[member.id] || {}) };
+
+  // Build rows in member's local time (filter unreasonable hours)
+  const rows = [];
+  SLOTS_ARG.forEach(hARG => {
+    const hLocal = toLocal(hARG, member.offset);
+    if (hLocal < 7 || hLocal > 22) return;
+    rows.push({ hARG, hLocal });
+  });
+
+  app.innerHTML = `
+    <div class="consigna">
+      <p>Hola <strong>${member.name}</strong> ${member.flag}! Los horarios ya están en <strong>tu zona horaria</strong>. Marcá (o arrastrá con el dedo/mouse) todos los horarios en los que podrías estar. Cuanto más flexible, más fácil coincidimos 🙌</p>
+    </div>
+
+    <div class="grid-wrapper">
+      <table class="grid" id="voteGrid">
+        <thead>
+          <tr>
+            <th>Tu hora</th>
+            ${DATES.map(d => `<th>${formatDayShort(d)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(({ hARG, hLocal }) => `
+            <tr>
+              <td class="time-label">${fmt(hLocal)}</td>
+              ${DATES.map(d => {
+                const key = `${d}_${hARG}`;
+                const sel = !!memberVotes[key];
+                return `<td><div class="slot ${sel ? "selected" : ""}" data-key="${key}" role="button" aria-pressed="${sel}">✓</div></td>`;
+              }).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="backBtn">← Volver</button>
+      <button class="btn btn-clear" id="clearBtn">Limpiar</button>
+      <button class="btn btn-primary" id="saveBtn" style="margin-left:auto;">Guardar ✓</button>
+    </div>
+    <p class="status" id="saveStatus"></p>
+  `;
+
+  // Drag-to-select
+  const grid = document.getElementById("voteGrid");
+  let dragging = false, dragMode = null, dirty = false;
+
+  function setSlot(el, on) {
+    const key = el.dataset.key;
+    if (on) {
+      memberVotes[key] = true;
+      el.classList.add("selected");
+      el.setAttribute("aria-pressed", "true");
+    } else {
+      delete memberVotes[key];
+      el.classList.remove("selected");
+      el.setAttribute("aria-pressed", "false");
+    }
+    dirty = true;
+  }
+  const slotAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    return el && el.classList.contains("slot") ? el : null;
+  };
+  const start = el => {
+    dragging = true;
+    dragMode = !el.classList.contains("selected");
+    setSlot(el, dragMode);
+  };
+
+  grid.addEventListener("mousedown", e => {
+    const el = e.target.closest(".slot");
+    if (!el) return;
+    e.preventDefault(); start(el);
+  });
+  window.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const el = slotAt(e.clientX, e.clientY);
+    if (el) setSlot(el, dragMode);
+  });
+  window.addEventListener("mouseup", () => { dragging = false; });
+
+  grid.addEventListener("touchstart", e => {
+    const el = e.target.closest(".slot");
+    if (!el) return;
+    e.preventDefault(); start(el);
+  }, { passive: false });
+  grid.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const el = slotAt(t.clientX, t.clientY);
+    if (el) setSlot(el, dragMode);
+  }, { passive: false });
+  window.addEventListener("touchend", () => { dragging = false; });
+
+  document.getElementById("backBtn").addEventListener("click", () => {
+    if (dirty && !confirm("Tenés cambios sin guardar. ¿Seguro que querés salir?")) return;
+    state.step = "setup"; state.currentMember = null; render();
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    if (!confirm("¿Borrar todas tus marcas?")) return;
+    grid.querySelectorAll(".slot.selected").forEach(el => setSlot(el, false));
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const status = document.getElementById("saveStatus");
+    const btn = document.getElementById("saveBtn");
+    btn.disabled = true; status.textContent = "Guardando…";
+    try {
+      const ok = await saveMemberVotes(member.id, memberVotes);
+      status.textContent = ok ? "✓ Guardado para todos" : "⚠ Guardado local (sin Firebase)";
+      setTimeout(() => {
+        state.step = "setup"; state.currentMember = null; render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 800);
+    } catch (e) {
+      status.textContent = "❌ Error guardando: " + e.message;
+      btn.disabled = false;
+    }
+  });
+}
+
+function renderResults() {
+  // Count per slot
+  const counts = {};
+  DATES.forEach(d => {
+    SLOTS_ARG.forEach(h => {
+      const key = `${d}_${h}`;
+      counts[key] = MEMBERS.filter(m => state.votes[m.id]?.[key]).length;
+    });
+  });
+
+  const totalVoters = MEMBERS.filter(m => state.votes[m.id] && Object.keys(state.votes[m.id]).length > 0).length;
+  const maxVotes = Math.max(0, ...Object.values(counts));
+  const topSlots = Object.entries(counts).filter(([, c]) => c === maxVotes && c > 0);
+
+  // Group hours by "natural" range: show hours that have at least one vote, plus a padding row
+  const activeHours = [...new Set(Object.entries(counts).filter(([, c]) => c > 0).map(([k]) => parseInt(k.split("_")[1])))];
+  // Default: show full range
+  const displayHours = SLOTS_ARG;
+
+  const anyVotes = maxVotes > 0;
+
+  app.innerHTML = `
+    ${renderConfigWarning()}
+    <p class="hint">
+      ${totalVoters}/${MEMBERS.length} personas votaron.
+      ${anyVotes ? "Pasá el mouse (o tocá) cualquier celda para ver quién puede y quién no." : ""}
+    </p>
+
+    ${anyVotes ? `
+      <div class="winner">
+        <p class="winner-label">🏆 Mejor${topSlots.length > 1 ? "es" : ""} horario${topSlots.length > 1 ? "s" : ""} (${maxVotes}/${MEMBERS.length} pueden)</p>
+        ${topSlots.slice(0, 3).map(([key]) => {
+          const [date, hStr] = key.split("_");
+          const hARG = parseInt(hStr);
+          const tzs = MEMBERS
+            .filter((m, i, arr) => arr.findIndex(x => x.offset === m.offset) === i)
+            .map(m => `${m.flag} ${fmt(toLocal(hARG, m.offset))}`)
+            .join(" · ");
+          return `
+            <p class="winner-time">${formatDate(date)} — ${fmt(hARG)} ARG</p>
+            <p class="winner-detail">${tzs}</p>
+          `;
+        }).join('<hr style="border:none; border-top:0.5px solid var(--green-mid); margin:8px 0;">')}
+      </div>
+    ` : ""}
+
+    <div class="legend-scale">
+      <span>0</span>
+      <div class="legend-gradient" id="legendGrad"></div>
+      <span>${MEMBERS.length}</span>
+      <span style="margin-left:auto;">= personas disponibles</span>
+    </div>
+
+    <div class="grid-wrapper">
+      <table class="grid" id="heatGrid">
+        <thead>
+          <tr>
+            <th>Hora ARG</th>
+            ${DATES.map(d => `<th>${formatDayShort(d)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${displayHours.map(hARG => `
+            <tr>
+              <td class="time-label">${fmt(hARG)}</td>
+              ${DATES.map(d => {
+                const key = `${d}_${hARG}`;
+                const c = counts[key] || 0;
+                const { bg, fg } = heatColor(c, MEMBERS.length);
+                return `<td>
+                  <div class="heat ${c === 0 ? "empty" : ""}"
+                       style="background:${bg}; color:${fg};"
+                       data-key="${key}"
+                       data-count="${c}">
+                    ${c || "·"}
+                  </div>
+                </td>`;
+              }).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+
+    ${adminPanelHTML()}
+  `;
+
+  // Paint legend gradient
+  const grad = document.getElementById("legendGrad");
+  if (grad) {
+    const steps = 12;
+    grad.innerHTML = Array.from({ length: steps }, (_, i) => {
+      const { bg } = heatColor(i, steps - 1);
+      return `<span style="background:${bg};"></span>`;
+    }).join("");
+  }
+
+  // Tooltips
+  const tooltip = document.getElementById("tooltip");
+  document.querySelectorAll(".heat").forEach(el => {
+    const showTip = e => {
+      const key = el.dataset.key;
+      const [date, hStr] = key.split("_");
+      const hARG = parseInt(hStr);
+      const voted = MEMBERS.filter(m => state.votes[m.id]?.[key]);
+      const notVoted = MEMBERS.filter(m => !state.votes[m.id]?.[key] && state.votes[m.id] && Object.keys(state.votes[m.id]).length > 0);
+      const notParticipated = MEMBERS.filter(m => !state.votes[m.id] || Object.keys(state.votes[m.id]).length === 0);
+
+      const tzLines = MEMBERS
+        .filter((m, i, arr) => arr.findIndex(x => x.offset === m.offset) === i)
+        .map(m => `${m.flag} ${fmt(toLocal(hARG, m.offset))}`)
+        .join(" · ");
+
+      tooltip.innerHTML = `
+        <strong>${formatDate(date)} · ${fmt(hARG)} ARG</strong><br>
+        <span style="color:#aaa; font-size:11px;">${tzLines}</span>
+        ${voted.length ? `<br><span class="tt-yes">✓ ${voted.map(m=>m.name).join(", ")}</span>` : ""}
+        ${notVoted.length ? `<br><span class="tt-no">✗ ${notVoted.map(m=>m.name).join(", ")}</span>` : ""}
+        ${notParticipated.length ? `<br><span style="color:#888;">? ${notParticipated.map(m=>m.name).join(", ")} (no votó)</span>` : ""}
+      `;
+      tooltip.classList.add("visible");
+      positionTip(e);
+    };
+    const positionTip = e => {
+      const x = e.clientX ?? (e.touches?.[0]?.clientX) ?? 0;
+      const y = e.clientY ?? (e.touches?.[0]?.clientY) ?? 0;
+      const rect = tooltip.getBoundingClientRect();
+      const pad = 12;
+      let left = x + pad;
+      let top = y + pad;
+      if (left + rect.width > window.innerWidth - 8) left = x - rect.width - pad;
+      if (top + rect.height > window.innerHeight - 8) top = y - rect.height - pad;
+      tooltip.style.left = Math.max(8, left) + "px";
+      tooltip.style.top = Math.max(8, top) + "px";
+    };
+    const hideTip = () => tooltip.classList.remove("visible");
+
+    el.addEventListener("mouseenter", showTip);
+    el.addEventListener("mousemove", positionTip);
+    el.addEventListener("mouseleave", hideTip);
+    el.addEventListener("click", e => { showTip(e); setTimeout(hideTip, 2500); });
+  });
+
+  bindAdmin();
+}
+
+function adminPanelHTML() {
+  return `
+    <div class="admin-panel">
+      <details>
+        <summary>⚙️ Panel admin</summary>
+        <div style="margin-top:10px;">
+          <p class="hint" style="margin-bottom:8px;">Participación individual:</p>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+            ${MEMBERS.map(m => {
+              const count = state.votes[m.id] ? Object.keys(state.votes[m.id]).length : 0;
+              return `<span style="background:${count ? 'var(--green-light)' : '#f5f5f5'}; border:0.5px solid ${count ? 'var(--green-mid)' : 'var(--border)'}; border-radius:8px; padding:4px 10px; font-size:12px;">
+                ${m.flag} ${m.name}: ${count} slots
+              </span>`;
+            }).join("")}
+          </div>
+          <div class="admin-actions">
+            <button class="btn" id="exportBtn">📋 Copiar JSON</button>
+            <button class="btn" id="resetBtn" style="color:#c44;">🗑 Borrar TODO</button>
+          </div>
+          <p class="status" id="adminStatus"></p>
+        </div>
+      </details>
+    </div>
+  `;
+}
+
+function bindAdmin() {
+  document.getElementById("exportBtn")?.addEventListener("click", async () => {
+    const txt = JSON.stringify(state.votes, null, 2);
+    const status = document.getElementById("adminStatus");
+    try {
+      await navigator.clipboard.writeText(txt);
+      status.textContent = "✓ Copiado al portapapeles";
+    } catch { status.textContent = txt; }
+  });
+  document.getElementById("resetBtn")?.addEventListener("click", async () => {
+    if (!confirm("¿BORRAR todos los votos de TODOS los participantes? Esta acción no se puede deshacer.")) return;
+    await clearAllVotes();
+    document.getElementById("adminStatus").textContent = "✓ Todo borrado";
+  });
+}
+
+// Tabs
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    state.view = tab.dataset.view;
+    state.step = "setup";
+    state.currentMember = null;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
